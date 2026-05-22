@@ -1,0 +1,1 @@
+"""SwitchBot IR (Others) integration."""
