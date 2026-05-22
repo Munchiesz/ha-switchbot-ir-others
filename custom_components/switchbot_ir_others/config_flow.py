@@ -169,15 +169,60 @@ class SwitchbotIROthersConfigFlow(ConfigFlow, domain=DOMAIN):
     @staticmethod
     @callback
     def async_get_options_flow(entry: ConfigEntry) -> OptionsFlow:
-        # Implemented in Task 13
-        raise NotImplementedError
+        return SwitchbotIROthersOptionsFlow(entry)
 
 
 class SwitchbotIROthersOptionsFlow(OptionsFlow):
-    """Options flow stub — implemented in Task 13."""
+    """Options flow: edit button lists for existing entries."""
 
     def __init__(self, entry: ConfigEntry) -> None:
         self._entry = entry
+        self._index = 0
+        self._updated: list[dict[str, Any]] = []
 
-    async def async_step_init(self, user_input: dict[str, Any] | None = None):
-        raise NotImplementedError
+    async def async_step_init(
+        self, user_input: dict[str, Any] | None = None
+    ):
+        return await self.async_step_buttons()
+
+    async def async_step_buttons(
+        self, user_input: dict[str, str] | None = None
+    ):
+        remotes = self._entry.options.get(CONF_REMOTES, [])
+        if self._index >= len(remotes):
+            return self.async_create_entry(
+                title="", data={CONF_REMOTES: self._updated}
+            )
+
+        current = remotes[self._index]
+        if user_input is not None:
+            buttons = [
+                line.strip()
+                for line in user_input.get("buttons", "").splitlines()
+                if line.strip()
+            ]
+            self._updated.append(
+                {
+                    CONF_DEVICE_ID: current[CONF_DEVICE_ID],
+                    CONF_DEVICE_NAME: current[CONF_DEVICE_NAME],
+                    CONF_BUTTONS: buttons,
+                }
+            )
+            self._index += 1
+            return await self.async_step_buttons()
+
+        existing = "\n".join(current.get(CONF_BUTTONS, []))
+        return self.async_show_form(
+            step_id="buttons",
+            description_placeholders={"remote_name": current[CONF_DEVICE_NAME]},
+            data_schema=vol.Schema(
+                {
+                    vol.Required("buttons", default=existing): TextSelector(
+                        TextSelectorConfig(
+                            type=TextSelectorType.TEXT,
+                            multiline=True,
+                        )
+                    ),
+                }
+            ),
+        )
