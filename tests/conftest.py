@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
+import contextlib
 import socket as _socket
 import sys
 
 import pytest
-
 
 if sys.platform == "win32":
     # On Windows, asyncio.ProactorEventLoop uses _fallback_socketpair (AF_INET)
@@ -16,9 +16,12 @@ if sys.platform == "win32":
     # socket.socket so the event loop self-pipe always works regardless of whether
     # pytest-socket has replaced socket.socket.
     import pytest_socket as _pytest_socket
-    _real_socket = _pytest_socket._true_socket  # the original socket.socket, saved by pytest-socket before patching (verified: pytest-socket 0.7.0)
 
-    def _win32_socketpair(family=_socket.AF_INET, type=_socket.SOCK_STREAM, proto=0):  # noqa: A002
+    # The original socket.socket, saved by pytest-socket before patching
+    # (verified: pytest-socket 0.7.0).
+    _real_socket = _pytest_socket._true_socket
+
+    def _win32_socketpair(family=_socket.AF_INET, type=_socket.SOCK_STREAM, proto=0):
         """socketpair that always uses the real socket.socket (not GuardedSocket).
 
         This is needed because Windows has no native socketpair() and Python's
@@ -49,10 +52,8 @@ if sys.platform == "win32":
                 csock = _real_socket(family, type, proto)
                 try:
                     csock.setblocking(False)
-                    try:
+                    with contextlib.suppress(BlockingIOError, InterruptedError):
                         csock.connect((addr, port))
-                    except (BlockingIOError, InterruptedError):
-                        pass
                     csock.setblocking(True)
                     ssock, _ = lsock.accept()
                 except Exception:

@@ -5,6 +5,18 @@ from __future__ import annotations
 import base64
 import hashlib
 import hmac
+import time
+import uuid
+from typing import Any
+
+import httpx
+
+from .const import (
+    API_BASE_URL,
+    API_STATUS_OK,
+    API_STATUS_UNAUTHORIZED,
+    API_TIMEOUT_SECONDS,
+)
 
 
 def _build_signature(*, token: str, secret: str, t: str, nonce: str) -> str:
@@ -23,20 +35,6 @@ class SwitchBotApiError(Exception):
 
 class SwitchBotAuthError(SwitchBotApiError):
     """Raised when SwitchBot rejects the token/secret."""
-
-
-import time
-import uuid
-from typing import Any
-
-import httpx
-
-from .const import (
-    API_BASE_URL,
-    API_STATUS_OK,
-    API_STATUS_UNAUTHORIZED,
-    API_TIMEOUT_SECONDS,
-)
 
 
 class SwitchBotApiClient:
