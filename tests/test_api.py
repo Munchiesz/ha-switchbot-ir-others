@@ -22,3 +22,18 @@ def test_build_signature_changes_with_nonce() -> None:
     a = _build_signature(token="tk", secret="sk", t="1700000000000", nonce="a")
     b = _build_signature(token="tk", secret="sk", t="1700000000000", nonce="b")
     assert a != b
+
+
+from custom_components.switchbot_ir_others.api import (
+    SwitchBotApiError,
+    SwitchBotAuthError,
+)
+
+
+def test_auth_error_is_api_error() -> None:
+    assert issubclass(SwitchBotAuthError, SwitchBotApiError)
+
+
+def test_api_error_carries_message() -> None:
+    err = SwitchBotApiError("boom")
+    assert str(err) == "boom"
