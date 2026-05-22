@@ -1,0 +1,47 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "SwitchBot credentials",
+        "description": "Open the SwitchBot app: Profile → Preferences → Developer Options to get your token and secret.",
+        "data": {
+          "token": "Token",
+          "secret": "Secret"
+        }
+      },
+      "select_remotes": {
+        "title": "Select \"Others\" remotes",
+        "description": "These are the learned (\"Others\"-type) IR remotes found on your account. Pick the ones you want in Home Assistant.",
+        "data": {
+          "remotes": "Remotes"
+        }
+      },
+      "buttons": {
+        "title": "Buttons for {remote_name}",
+        "description": "Enter the button names exactly as you set them in the SwitchBot app, one per line. Capitalization and spacing must match (e.g. \"TEMP UP\", not \"temp up\").",
+        "data": {
+          "buttons": "Button names"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Invalid token or secret.",
+      "cannot_connect": "Could not reach the SwitchBot API."
+    },
+    "abort": {
+      "no_others_remotes": "No \"Others\"-type remotes were found on this SwitchBot account.",
+      "already_configured": "This SwitchBot account is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "buttons": {
+        "title": "Buttons for {remote_name}",
+        "description": "Update the button names for this remote. One per line, exactly as named in the SwitchBot app.",
+        "data": {
+          "buttons": "Button names"
+        }
+      }
+    }
+  }
+}
