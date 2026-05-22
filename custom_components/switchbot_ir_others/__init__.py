@@ -5,9 +5,14 @@ from __future__ import annotations
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
 from homeassistant.helpers.httpx_client import get_async_client
 
-from .api import SwitchBotApiClient
+from .api import (
+    SwitchBotApiClient,
+    SwitchBotApiError,
+    SwitchBotAuthError,
+)
 from .const import CONF_SECRET, CONF_TOKEN, DOMAIN
 
 PLATFORMS: list[Platform] = [Platform.BUTTON]
@@ -20,6 +25,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         secret=entry.data[CONF_SECRET],
         http_client=get_async_client(hass),
     )
+    try:
+        await client.list_infrared_remotes()
+    except SwitchBotAuthError as err:
+        raise ConfigEntryAuthFailed(str(err)) from err
+    except SwitchBotApiError as err:
+        raise ConfigEntryNotReady(str(err)) from err
+
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = client
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))

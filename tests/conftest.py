@@ -18,8 +18,9 @@ if sys.platform == "win32":
     import pytest_socket as _pytest_socket
 
     # The original socket.socket, saved by pytest-socket before patching
-    # (verified: pytest-socket 0.7.0).
-    _real_socket = _pytest_socket._true_socket
+    # (verified: pytest-socket 0.7.0). Fall back to the current socket.socket
+    # if the private attribute is ever renamed by an upstream release.
+    _real_socket = getattr(_pytest_socket, "_true_socket", None) or _socket.socket
 
     def _win32_socketpair(family=_socket.AF_INET, type=_socket.SOCK_STREAM, proto=0):
         """socketpair that always uses the real socket.socket (not GuardedSocket).

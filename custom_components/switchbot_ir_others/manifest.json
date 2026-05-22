@@ -6,7 +6,10 @@
   "issue_tracker": "https://github.com/Munchiesz/ha-switchbot-ir-others/issues",
   "codeowners": ["@Munchiesz"],
   "config_flow": true,
-  "iot_class": "cloud_push",
+  "dependencies": [],
+  "iot_class": "assumed_state",
   "integration_type": "hub",
+  "min_ha_version": "2025.1.0",
+  "quality_scale": "bronze",
   "requirements": []
 }

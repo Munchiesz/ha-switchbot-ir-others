@@ -22,6 +22,14 @@
         "data": {
           "buttons": "Button names"
         }
+      },
+      "reauth_confirm": {
+        "title": "Reauthenticate SwitchBot",
+        "description": "Your SwitchBot token or secret was rejected. Paste fresh credentials from the SwitchBot app (Profile → Preferences → Developer Options).",
+        "data": {
+          "token": "Token",
+          "secret": "Secret"
+        }
       }
     },
     "error": {
@@ -30,11 +38,21 @@
     },
     "abort": {
       "no_others_remotes": "No \"Others\"-type remotes were found on this SwitchBot account.",
-      "already_configured": "This SwitchBot account is already configured."
+      "already_configured": "This SwitchBot account is already configured.",
+      "reauth_successful": "Reauthentication successful.",
+      "account_mismatch": "These credentials belong to a different SwitchBot account than the one being reauthenticated.",
+      "unknown": "Unexpected error completing setup."
     }
   },
   "options": {
     "step": {
+      "select_remotes": {
+        "title": "Select \"Others\" remotes",
+        "description": "Pick the \"Others\"-type remotes you want in Home Assistant. Newly-added remotes will appear here.",
+        "data": {
+          "remotes": "Remotes"
+        }
+      },
       "buttons": {
         "title": "Buttons for {remote_name}",
         "description": "Update the button names for this remote. One per line, exactly as named in the SwitchBot app.",

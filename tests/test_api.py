@@ -12,6 +12,7 @@ from custom_components.switchbot_ir_others.api import (
     SwitchBotApiClient,
     SwitchBotApiError,
     SwitchBotAuthError,
+    SwitchBotRateLimitError,
     _build_signature,
 )
 from custom_components.switchbot_ir_others.const import API_BASE_URL
@@ -38,6 +39,10 @@ def test_build_signature_changes_with_nonce() -> None:
 
 def test_auth_error_is_api_error() -> None:
     assert issubclass(SwitchBotAuthError, SwitchBotApiError)
+
+
+def test_rate_limit_error_is_api_error() -> None:
+    assert issubclass(SwitchBotRateLimitError, SwitchBotApiError)
 
 
 def test_api_error_carries_message() -> None:
@@ -80,19 +85,27 @@ async def test_list_infrared_remotes_returns_list() -> None:
 
 
 @pytest.mark.asyncio
-async def test_send_command_posts_customize() -> None:
+async def test_send_command_posts_customize_and_signs() -> None:
     captured: dict[str, Any] = {}
 
     def _record(request: httpx.Request) -> httpx.Response:
         import json as _json
+
         captured["url"] = str(request.url)
         captured["body"] = _json.loads(request.content)
         captured["sign"] = request.headers.get("sign")
-        return httpx.Response(200, json={"statusCode": 100, "message": "ok", "body": {}})
+        captured["auth"] = request.headers.get("Authorization")
+        captured["t"] = request.headers.get("t")
+        captured["nonce"] = request.headers.get("nonce")
+        return httpx.Response(
+            200, json={"statusCode": 100, "message": "ok", "body": {}}
+        )
 
     async with httpx.AsyncClient() as http:
         with respx.mock:
-            respx.post(f"{API_BASE_URL}/devices/dev-1/commands").mock(side_effect=_record)
+            respx.post(f"{API_BASE_URL}/devices/dev-1/commands").mock(
+                side_effect=_record
+            )
             client = SwitchBotApiClient(token="tk", secret="sk", http_client=http)
             await client.send_command("dev-1", "TEMP UP")
 
@@ -102,7 +115,11 @@ async def test_send_command_posts_customize() -> None:
         "command": "TEMP UP",
         "parameter": "default",
     }
-    assert captured["sign"]  # signed
+    # SwitchBot v1.1 expects the raw token in Authorization (no "Bearer" prefix).
+    assert captured["auth"] == "tk"
+    assert captured["sign"]
+    assert captured["t"]
+    assert captured["nonce"]
 
 
 @pytest.mark.asyncio
@@ -123,11 +140,67 @@ async def test_send_command_raises_auth_on_status_161() -> None:
         with respx.mock:
             respx.post(f"{API_BASE_URL}/devices/d/commands").mock(
                 return_value=httpx.Response(
-                    200, json={"statusCode": 161, "message": "Token invalid", "body": {}}
+                    200,
+                    json={
+                        "statusCode": 161,
+                        "message": "Token invalid",
+                        "body": {},
+                    },
                 )
             )
             client = SwitchBotApiClient(token="tk", secret="sk", http_client=http)
             with pytest.raises(SwitchBotAuthError):
+                await client.send_command("d", "X")
+
+
+@pytest.mark.asyncio
+async def test_send_command_raises_auth_on_status_171() -> None:
+    async with httpx.AsyncClient() as http:
+        with respx.mock:
+            respx.post(f"{API_BASE_URL}/devices/d/commands").mock(
+                return_value=httpx.Response(
+                    200,
+                    json={
+                        "statusCode": 171,
+                        "message": "Hub device offline",
+                        "body": {},
+                    },
+                )
+            )
+            client = SwitchBotApiClient(token="tk", secret="sk", http_client=http)
+            with pytest.raises(SwitchBotAuthError):
+                await client.send_command("d", "X")
+
+
+@pytest.mark.asyncio
+async def test_send_command_raises_rate_limit_on_status_190() -> None:
+    async with httpx.AsyncClient() as http:
+        with respx.mock:
+            respx.post(f"{API_BASE_URL}/devices/d/commands").mock(
+                return_value=httpx.Response(
+                    200,
+                    json={
+                        "statusCode": 190,
+                        "message": "Rate limited",
+                        "body": {},
+                    },
+                )
+            )
+            client = SwitchBotApiClient(token="tk", secret="sk", http_client=http)
+            with pytest.raises(SwitchBotRateLimitError) as info:
+                await client.send_command("d", "X")
+            assert "190" in str(info.value)
+
+
+@pytest.mark.asyncio
+async def test_send_command_raises_rate_limit_on_http_429() -> None:
+    async with httpx.AsyncClient() as http:
+        with respx.mock:
+            respx.post(f"{API_BASE_URL}/devices/d/commands").mock(
+                return_value=httpx.Response(429, text="Too Many Requests")
+            )
+            client = SwitchBotApiClient(token="tk", secret="sk", http_client=http)
+            with pytest.raises(SwitchBotRateLimitError):
                 await client.send_command("d", "X")
 
 
@@ -138,11 +211,40 @@ async def test_send_command_raises_api_error_on_other_status() -> None:
             respx.post(f"{API_BASE_URL}/devices/d/commands").mock(
                 return_value=httpx.Response(
                     200,
-                    json={"statusCode": 190, "message": "Rate limited", "body": {}},
+                    json={
+                        "statusCode": 151,
+                        "message": "Device not found",
+                        "body": {},
+                    },
                 )
             )
             client = SwitchBotApiClient(token="tk", secret="sk", http_client=http)
             with pytest.raises(SwitchBotApiError) as info:
                 await client.send_command("d", "X")
             assert not isinstance(info.value, SwitchBotAuthError)
-            assert "190" in str(info.value)
+            assert not isinstance(info.value, SwitchBotRateLimitError)
+            assert "151" in str(info.value)
+
+
+@pytest.mark.asyncio
+async def test_request_handles_non_json_body() -> None:
+    async with httpx.AsyncClient() as http:
+        with respx.mock:
+            respx.get(f"{API_BASE_URL}/devices").mock(
+                return_value=httpx.Response(200, text="<html>oops</html>")
+            )
+            client = SwitchBotApiClient(token="tk", secret="sk", http_client=http)
+            with pytest.raises(SwitchBotApiError, match="Non-JSON response"):
+                await client.list_infrared_remotes()
+
+
+@pytest.mark.asyncio
+async def test_request_handles_network_error() -> None:
+    async with httpx.AsyncClient() as http:
+        with respx.mock:
+            respx.get(f"{API_BASE_URL}/devices").mock(
+                side_effect=httpx.ConnectError("connection refused")
+            )
+            client = SwitchBotApiClient(token="tk", secret="sk", http_client=http)
+            with pytest.raises(SwitchBotApiError, match="Network error"):
+                await client.list_infrared_remotes()

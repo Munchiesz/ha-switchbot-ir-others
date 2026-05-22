@@ -2,13 +2,17 @@
 
 from __future__ import annotations
 
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import HomeAssistant
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
+from custom_components.switchbot_ir_others.api import (
+    SwitchBotApiError,
+    SwitchBotAuthError,
+)
 from custom_components.switchbot_ir_others.const import (
     CONF_BUTTONS,
     CONF_DEVICE_ID,
@@ -31,13 +35,8 @@ async def test_setup_and_unload(hass: HomeAssistant) -> None:
 
     with patch(
         "custom_components.switchbot_ir_others.SwitchBotApiClient"
-    ), patch(
-        "homeassistant.config_entries.ConfigEntries.async_forward_entry_setups",
-        return_value=True,
-    ), patch(
-        "homeassistant.config_entries.ConfigEntries.async_unload_platforms",
-        return_value=True,
-    ):
+    ) as mock_cls:
+        mock_cls.return_value.list_infrared_remotes = AsyncMock(return_value=[])
         assert await hass.config_entries.async_setup(entry.entry_id)
         await hass.async_block_till_done()
 
@@ -48,6 +47,50 @@ async def test_setup_and_unload(hass: HomeAssistant) -> None:
     await hass.async_block_till_done()
     assert entry.state is ConfigEntryState.NOT_LOADED
     assert entry.entry_id not in hass.data.get(DOMAIN, {})
+
+
+@pytest.mark.asyncio
+async def test_setup_raises_auth_failed_on_bad_token(hass: HomeAssistant) -> None:
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={CONF_TOKEN: "tk", CONF_SECRET: "sk"},
+        options={CONF_REMOTES: []},
+    )
+    entry.add_to_hass(hass)
+
+    with patch(
+        "custom_components.switchbot_ir_others.SwitchBotApiClient"
+    ) as mock_cls:
+        mock_cls.return_value.list_infrared_remotes = AsyncMock(
+            side_effect=SwitchBotAuthError("nope")
+        )
+        await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+
+    # ConfigEntryAuthFailed → SETUP_ERROR and a reauth flow gets scheduled.
+    assert entry.state is ConfigEntryState.SETUP_ERROR
+
+
+@pytest.mark.asyncio
+async def test_setup_retries_on_transient_error(hass: HomeAssistant) -> None:
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={CONF_TOKEN: "tk", CONF_SECRET: "sk"},
+        options={CONF_REMOTES: []},
+    )
+    entry.add_to_hass(hass)
+
+    with patch(
+        "custom_components.switchbot_ir_others.SwitchBotApiClient"
+    ) as mock_cls:
+        mock_cls.return_value.list_infrared_remotes = AsyncMock(
+            side_effect=SwitchBotApiError("network down")
+        )
+        await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+
+    # ConfigEntryNotReady → SETUP_RETRY.
+    assert entry.state is ConfigEntryState.SETUP_RETRY
 
 
 @pytest.mark.asyncio
@@ -73,7 +116,10 @@ async def test_full_setup_creates_all_office_ac_buttons(hass: HomeAssistant) -> 
     )
     entry.add_to_hass(hass)
 
-    with patch("custom_components.switchbot_ir_others.SwitchBotApiClient"):
+    with patch(
+        "custom_components.switchbot_ir_others.SwitchBotApiClient"
+    ) as mock_cls:
+        mock_cls.return_value.list_infrared_remotes = AsyncMock(return_value=[])
         assert await hass.config_entries.async_setup(entry.entry_id)
         await hass.async_block_till_done()
 

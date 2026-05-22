@@ -54,7 +54,8 @@ All five live under a single device card so they group cleanly in the UI.
 
 ## Troubleshooting
 
-- **"Invalid token or secret"** — regenerate them in the SwitchBot app; make sure you copied both fields fully.
+- **"Invalid token or secret"** — re-copy them from the SwitchBot app and paste them into the HA "Repair" / reauth prompt. If only the secret was rotated (not the token), reauth will pick up the new credentials and the existing entry keeps working.
+- **Rotated the SwitchBot token itself?** A regenerated token registers as a different account inside this integration, so reauth will report `account_mismatch`. Remove the integration and re-add it with the new token.
 - **"No 'Others'-type remotes were found"** — your account has no remotes set up under the Others category. Add one in the SwitchBot app first. If you set up the AC as a standard "Air Conditioner" type instead of "Others", this integration won't see it (by design — the official integration handles standard types).
 - **Press succeeds but nothing happens** — the button name doesn't exactly match the SwitchBot app. Check capitalization, spaces, and slashes (e.g. `ON/OFF` not `on/off`).
 - **Rate limited** — SwitchBot enforces 10,000 API calls per token per day. Be mindful in automations.
