@@ -116,12 +116,55 @@ class SwitchbotIROthersConfigFlow(ConfigFlow, domain=DOMAIN):
     async def async_step_buttons(
         self, user_input: dict[str, str] | None = None
     ):
-        # Implemented in Task 12
-        raise NotImplementedError
+        if self._current_index >= len(self._selected_ids):
+            return await self._finish()
+
+        current_id = self._selected_ids[self._current_index]
+        current = next(r for r in self._remotes if r["deviceId"] == current_id)
+
+        if user_input is not None:
+            buttons = [
+                line.strip()
+                for line in user_input.get("buttons", "").splitlines()
+                if line.strip()
+            ]
+            self._configured_remotes.append(
+                {
+                    CONF_DEVICE_ID: current["deviceId"],
+                    CONF_DEVICE_NAME: current["deviceName"],
+                    CONF_BUTTONS: buttons,
+                }
+            )
+            self._current_index += 1
+            return await self.async_step_buttons()
+
+        return self.async_show_form(
+            step_id="buttons",
+            description_placeholders={"remote_name": current["deviceName"]},
+            data_schema=vol.Schema(
+                {
+                    vol.Required("buttons"): TextSelector(
+                        TextSelectorConfig(
+                            type=TextSelectorType.TEXT,
+                            multiline=True,
+                        )
+                    ),
+                }
+            ),
+        )
 
     async def _finish(self):
-        # Implemented in Task 12
-        raise NotImplementedError
+        assert self._token is not None
+        await self.async_set_unique_id(f"{DOMAIN}_{self._token[-6:]}")
+        self._abort_if_unique_id_configured()
+        return self.async_create_entry(
+            title="SwitchBot IR (Others)",
+            data={
+                CONF_TOKEN: self._token,
+                CONF_SECRET: self._secret,
+            },
+            options={CONF_REMOTES: self._configured_remotes},
+        )
 
     @staticmethod
     @callback
