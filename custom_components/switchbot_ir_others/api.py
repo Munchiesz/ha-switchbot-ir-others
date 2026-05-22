@@ -104,3 +104,14 @@ class SwitchBotApiClient:
     async def list_infrared_remotes(self) -> list[dict[str, Any]]:
         body = await self._request("GET", "/devices")
         return body.get("infraredRemoteList", [])
+
+    async def send_command(self, device_id: str, command: str) -> None:
+        await self._request(
+            "POST",
+            f"/devices/{device_id}/commands",
+            json={
+                "commandType": "customize",
+                "command": command,
+                "parameter": "default",
+            },
+        )

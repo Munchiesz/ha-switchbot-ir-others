@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import httpx
 import pytest
 import respx
@@ -75,3 +77,72 @@ async def test_list_infrared_remotes_returns_list() -> None:
             remotes = await client.list_infrared_remotes()
     assert len(remotes) == 2
     assert remotes[0]["deviceName"] == "OFFICE AC"
+
+
+@pytest.mark.asyncio
+async def test_send_command_posts_customize() -> None:
+    captured: dict[str, Any] = {}
+
+    def _record(request: httpx.Request) -> httpx.Response:
+        import json as _json
+        captured["url"] = str(request.url)
+        captured["body"] = _json.loads(request.content)
+        captured["sign"] = request.headers.get("sign")
+        return httpx.Response(200, json={"statusCode": 100, "message": "ok", "body": {}})
+
+    async with httpx.AsyncClient() as http:
+        with respx.mock:
+            respx.post(f"{API_BASE_URL}/devices/dev-1/commands").mock(side_effect=_record)
+            client = SwitchBotApiClient(token="tk", secret="sk", http_client=http)
+            await client.send_command("dev-1", "TEMP UP")
+
+    assert captured["url"].endswith("/devices/dev-1/commands")
+    assert captured["body"] == {
+        "commandType": "customize",
+        "command": "TEMP UP",
+        "parameter": "default",
+    }
+    assert captured["sign"]  # signed
+
+
+@pytest.mark.asyncio
+async def test_send_command_raises_auth_on_401() -> None:
+    async with httpx.AsyncClient() as http:
+        with respx.mock:
+            respx.post(f"{API_BASE_URL}/devices/d/commands").mock(
+                return_value=httpx.Response(401, json={})
+            )
+            client = SwitchBotApiClient(token="tk", secret="sk", http_client=http)
+            with pytest.raises(SwitchBotAuthError):
+                await client.send_command("d", "X")
+
+
+@pytest.mark.asyncio
+async def test_send_command_raises_auth_on_status_161() -> None:
+    async with httpx.AsyncClient() as http:
+        with respx.mock:
+            respx.post(f"{API_BASE_URL}/devices/d/commands").mock(
+                return_value=httpx.Response(
+                    200, json={"statusCode": 161, "message": "Token invalid", "body": {}}
+                )
+            )
+            client = SwitchBotApiClient(token="tk", secret="sk", http_client=http)
+            with pytest.raises(SwitchBotAuthError):
+                await client.send_command("d", "X")
+
+
+@pytest.mark.asyncio
+async def test_send_command_raises_api_error_on_other_status() -> None:
+    async with httpx.AsyncClient() as http:
+        with respx.mock:
+            respx.post(f"{API_BASE_URL}/devices/d/commands").mock(
+                return_value=httpx.Response(
+                    200,
+                    json={"statusCode": 190, "message": "Rate limited", "body": {}},
+                )
+            )
+            client = SwitchBotApiClient(token="tk", secret="sk", http_client=http)
+            with pytest.raises(SwitchBotApiError) as info:
+                await client.send_command("d", "X")
+            assert not isinstance(info.value, SwitchBotAuthError)
+            assert "190" in str(info.value)
