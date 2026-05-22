@@ -89,8 +89,29 @@ class SwitchbotIROthersConfigFlow(ConfigFlow, domain=DOMAIN):
     async def async_step_select_remotes(
         self, user_input: dict[str, Any] | None = None
     ):
-        # Implemented in Task 11 — stub to satisfy flow chain
-        raise NotImplementedError
+        if user_input is not None:
+            self._selected_ids = user_input["remotes"]
+            self._current_index = 0
+            return await self.async_step_buttons()
+
+        options = [
+            SelectOptionDict(value=r["deviceId"], label=r["deviceName"])
+            for r in self._remotes
+        ]
+        return self.async_show_form(
+            step_id="select_remotes",
+            data_schema=vol.Schema(
+                {
+                    vol.Required("remotes"): SelectSelector(
+                        SelectSelectorConfig(
+                            options=options,
+                            multiple=True,
+                            mode=SelectSelectorMode.LIST,
+                        )
+                    ),
+                }
+            ),
+        )
 
     async def async_step_buttons(
         self, user_input: dict[str, str] | None = None
