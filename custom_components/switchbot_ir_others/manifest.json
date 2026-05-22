@@ -1,7 +1,7 @@
 {
   "domain": "switchbot_ir_others",
   "name": "SwitchBot IR (Others)",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "documentation": "https://github.com/Munchiesz/ha-switchbot-ir-others",
   "issue_tracker": "https://github.com/Munchiesz/ha-switchbot-ir-others/issues",
   "codeowners": ["@Munchiesz"],

@@ -1,6 +1,6 @@
 [project]
 name = "switchbot-ir-others"
-version = "0.1.0"
+version = "0.2.0"
 description = "Home Assistant integration for SwitchBot Others-type IR remotes"
 requires-python = ">=3.13"
 
