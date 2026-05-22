@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from custom_components.switchbot_ir_others.api import (
+    SwitchBotApiClient,
     SwitchBotApiError,
     SwitchBotAuthError,
     _build_signature,
@@ -35,3 +36,44 @@ def test_auth_error_is_api_error() -> None:
 def test_api_error_carries_message() -> None:
     err = SwitchBotApiError("boom")
     assert str(err) == "boom"
+
+
+import httpx
+import pytest
+import respx
+
+from custom_components.switchbot_ir_others.const import API_BASE_URL
+
+
+@pytest.mark.asyncio
+async def test_list_infrared_remotes_returns_list() -> None:
+    body = {
+        "statusCode": 100,
+        "message": "success",
+        "body": {
+            "deviceList": [],
+            "infraredRemoteList": [
+                {
+                    "deviceId": "01-1",
+                    "deviceName": "OFFICE AC",
+                    "remoteType": "Others",
+                    "hubDeviceId": "hub-1",
+                },
+                {
+                    "deviceId": "02-2",
+                    "deviceName": "LIVING TV",
+                    "remoteType": "TV",
+                    "hubDeviceId": "hub-1",
+                },
+            ],
+        },
+    }
+    async with httpx.AsyncClient() as http:
+        with respx.mock:
+            respx.get(f"{API_BASE_URL}/devices").mock(
+                return_value=httpx.Response(200, json=body)
+            )
+            client = SwitchBotApiClient(token="tk", secret="sk", http_client=http)
+            remotes = await client.list_infrared_remotes()
+    assert len(remotes) == 2
+    assert remotes[0]["deviceName"] == "OFFICE AC"
