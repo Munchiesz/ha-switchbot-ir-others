@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
-from custom_components.switchbot_ir_others.api import _build_signature
+from custom_components.switchbot_ir_others.api import (
+    SwitchBotApiError,
+    SwitchBotAuthError,
+    _build_signature,
+)
 
 
 def test_build_signature_matches_known_value() -> None:
@@ -22,12 +26,6 @@ def test_build_signature_changes_with_nonce() -> None:
     a = _build_signature(token="tk", secret="sk", t="1700000000000", nonce="a")
     b = _build_signature(token="tk", secret="sk", t="1700000000000", nonce="b")
     assert a != b
-
-
-from custom_components.switchbot_ir_others.api import (
-    SwitchBotApiError,
-    SwitchBotAuthError,
-)
 
 
 def test_auth_error_is_api_error() -> None:
