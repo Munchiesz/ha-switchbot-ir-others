@@ -22,7 +22,7 @@ If you set up an AC, fan, or any other appliance under the "Others" category in 
 ### Via HACS (recommended)
 
 1. HACS → Integrations → ••• → Custom repositories
-2. Add `https://github.com/theilya/ha-switchbot-ir-others` as an Integration
+2. Add `https://github.com/Munchiesz/ha-switchbot-ir-others` as an Integration
 3. Install "SwitchBot IR (Others)"
 4. Restart Home Assistant
 
@@ -69,7 +69,7 @@ All five live under a single device card so they group cleanly in the UI.
 ### Setup
 
 ```bash
-git clone https://github.com/theilya/ha-switchbot-ir-others
+git clone https://github.com/Munchiesz/ha-switchbot-ir-others
 cd ha-switchbot-ir-others
 uv pip install --system --group dev
 ```
