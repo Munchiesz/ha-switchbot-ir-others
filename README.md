@@ -1,3 +1,5 @@
+<p align="center"><img src=".github/icon.svg" width="96" alt=""></p>
+
 # SwitchBot IR (Others) — Home Assistant integration
 
 A HACS-installable custom integration that adds Home Assistant support for SwitchBot **"Others"-type** IR remotes — the user-learned remotes the official `switchbot_cloud` integration skips.

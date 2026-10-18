@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="ha-switchbot-ir-others">
+  <defs><linearGradient id="g-ha-switchbot-ir-others" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#38bdf8"/><stop offset="1" stop-color="#0c4a6e"/>
+  </linearGradient></defs>
+  <rect width="128" height="128" rx="28" fill="url(#g-ha-switchbot-ir-others)"/>
+  <g stroke-width="6">
+      <rect x="44" y="46" width="34" height="62" rx="10" fill="none" stroke="#fff" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="61" cy="62" r="5" fill="#fff"/>
+      <rect x="53" y="76" width="7" height="7" rx="2" fill="#fff"/><rect x="63" y="76" width="7" height="7" rx="2" fill="#fff"/>
+      <rect x="53" y="88" width="7" height="7" rx="2" fill="#fff"/><rect x="63" y="88" width="7" height="7" rx="2" fill="#fff"/>
+      <path d="M78 34a18 18 0 0 1 14 14M80 20a32 32 0 0 1 26 26" fill="none" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width="5"/>
+  </g>
+</svg>
