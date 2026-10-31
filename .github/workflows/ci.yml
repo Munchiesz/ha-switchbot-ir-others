@@ -23,6 +23,8 @@ jobs:
         run: python -m pytest -v
 
   hacs:
+    # The HACS action refuses private repositories, so it only runs once the repo is public.
+    if: ${{ !github.event.repository.private }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
