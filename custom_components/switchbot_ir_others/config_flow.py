@@ -42,6 +42,8 @@ from .const import (
     REMOTE_TYPE_OTHERS,
 )
 
+_PASSWORD_SELECTOR = TextSelector(TextSelectorConfig(type=TextSelectorType.PASSWORD))
+
 
 def _token_unique_id(token: str) -> str:
     """Return a stable, non-leaking unique_id derived from the token."""
@@ -112,8 +114,8 @@ class SwitchbotIROthersConfigFlow(ConfigFlow, domain=DOMAIN):
             step_id="user",
             data_schema=vol.Schema(
                 {
-                    vol.Required(CONF_TOKEN): str,
-                    vol.Required(CONF_SECRET): str,
+                    vol.Required(CONF_TOKEN): _PASSWORD_SELECTOR,
+                    vol.Required(CONF_SECRET): _PASSWORD_SELECTOR,
                 }
             ),
             errors=errors,
@@ -245,8 +247,8 @@ class SwitchbotIROthersConfigFlow(ConfigFlow, domain=DOMAIN):
             step_id="reauth_confirm",
             data_schema=vol.Schema(
                 {
-                    vol.Required(CONF_TOKEN): str,
-                    vol.Required(CONF_SECRET): str,
+                    vol.Required(CONF_TOKEN): _PASSWORD_SELECTOR,
+                    vol.Required(CONF_SECRET): _PASSWORD_SELECTOR,
                 }
             ),
             errors=errors,
