@@ -40,7 +40,6 @@
       "no_others_remotes": "No \"Others\"-type remotes were found on this SwitchBot account.",
       "already_configured": "This SwitchBot account is already configured.",
       "reauth_successful": "Reauthentication successful.",
-      "account_mismatch": "These credentials belong to a different SwitchBot account than the one being reauthenticated.",
       "unknown": "Unexpected error completing setup."
     }
   },

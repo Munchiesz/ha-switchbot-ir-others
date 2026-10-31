@@ -5,7 +5,7 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, patch
 
 import pytest
-from homeassistant.config_entries import SOURCE_REAUTH
+from homeassistant.config_entries import SOURCE_REAUTH, ConfigEntryState
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
 from pytest_homeassistant_custom_component.common import MockConfigEntry
@@ -418,8 +418,8 @@ async def test_reauth_flow_rejects_invalid_credentials(hass: HomeAssistant) -> N
 
 
 @pytest.mark.asyncio
-async def test_reauth_flow_rejects_different_account(hass: HomeAssistant) -> None:
-    """If the user pastes a different SwitchBot account's credentials, abort."""
+async def test_reauth_flow_accepts_regenerated_token(hass: HomeAssistant) -> None:
+    """A brand-new token that authenticates replaces the old one and the unique_id."""
     entry = MockConfigEntry(
         domain=DOMAIN,
         data={CONF_TOKEN: "old-tk", CONF_SECRET: "old-sk"},
@@ -427,6 +427,55 @@ async def test_reauth_flow_rejects_different_account(hass: HomeAssistant) -> Non
         unique_id=_token_unique_id("old-tk"),
     )
     entry.add_to_hass(hass)
+
+    with patch(
+        "custom_components.switchbot_ir_others.config_flow.SwitchBotApiClient"
+    ) as flow_mock, patch(
+        "custom_components.switchbot_ir_others.SwitchBotApiClient"
+    ) as init_mock:
+        flow_mock.return_value.list_infrared_remotes = AsyncMock(return_value=[])
+        init_mock.return_value.list_infrared_remotes = AsyncMock(return_value=[])
+
+        result = await hass.config_entries.flow.async_init(
+            DOMAIN,
+            context={"source": SOURCE_REAUTH, "entry_id": entry.entry_id},
+            data=entry.data,
+        )
+        assert result["step_id"] == "reauth_confirm"
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            {CONF_TOKEN: "new-tk", CONF_SECRET: "new-sk"},
+        )
+        await hass.async_block_till_done()
+
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "reauth_successful"
+    assert entry.data[CONF_TOKEN] == "new-tk"
+    assert entry.data[CONF_SECRET] == "new-sk"
+    assert entry.unique_id == _token_unique_id("new-tk")
+    # The entry was reloaded with the new credentials.
+    assert entry.state is ConfigEntryState.LOADED
+
+
+@pytest.mark.asyncio
+async def test_reauth_flow_rejects_token_owned_by_another_entry(
+    hass: HomeAssistant,
+) -> None:
+    """If the new token already belongs to a DIFFERENT entry, refuse and change nothing."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={CONF_TOKEN: "old-tk", CONF_SECRET: "old-sk"},
+        options={CONF_REMOTES: []},
+        unique_id=_token_unique_id("old-tk"),
+    )
+    entry.add_to_hass(hass)
+    other = MockConfigEntry(
+        domain=DOMAIN,
+        data={CONF_TOKEN: "other-tk", CONF_SECRET: "other-sk"},
+        options={CONF_REMOTES: []},
+        unique_id=_token_unique_id("other-tk"),
+    )
+    other.add_to_hass(hass)
 
     with patch(
         "custom_components.switchbot_ir_others.config_flow.SwitchBotApiClient"
@@ -438,17 +487,16 @@ async def test_reauth_flow_rejects_different_account(hass: HomeAssistant) -> Non
             data=entry.data,
         )
         assert result["step_id"] == "reauth_confirm"
-        # A completely different token → different unique_id → mismatch.
         result = await hass.config_entries.flow.async_configure(
             result["flow_id"],
-            {CONF_TOKEN: "totally-different-tk", CONF_SECRET: "new-sk"},
+            {CONF_TOKEN: "other-tk", CONF_SECRET: "other-sk"},
         )
 
     assert result["type"] is FlowResultType.ABORT
-    assert result["reason"] == "account_mismatch"
-    # Existing entry's credentials must be unchanged.
+    assert result["reason"] == "already_configured"
     assert entry.data[CONF_TOKEN] == "old-tk"
     assert entry.data[CONF_SECRET] == "old-sk"
+    assert entry.unique_id == _token_unique_id("old-tk")
 
 
 def test_token_unique_id_differs_for_different_tokens() -> None:
