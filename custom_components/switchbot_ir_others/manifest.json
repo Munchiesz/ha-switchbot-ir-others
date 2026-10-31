@@ -9,7 +9,6 @@
   "dependencies": [],
   "iot_class": "assumed_state",
   "integration_type": "hub",
-  "min_ha_version": "2025.1.0",
   "quality_scale": "bronze",
   "requirements": []
 }
